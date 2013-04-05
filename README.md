@@ -3,4 +3,6 @@ lambda
 
 A Lambda Calculus interpreter
 
-Nothing here yet.
+* The `hs` directory contains a Lambda Calculus interpreter written in Haskell
+* The `js` directory will contain a JavaScript version
+
