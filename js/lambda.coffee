@@ -40,11 +40,52 @@ $.get 'lambda.peg', (grammar) ->
     'name': (name) -> name
     'apply': (apply) ->
       if apply.a.type == 'lambda'
-        lambda = apply.a
+        lambda = resolveNameConflicts apply.a, apply.b
         substitute lambda.body, lambda.arg, apply.b
       else _.extend apply,
         a: reduce apply.a
         b: reduce apply.b
+
+  # TODO implement this
+  resolveNameConflicts = (a, b) -> a
+
+# resolveNameConflicts a b =
+#   let
+#     -- start with 't' to satisfy given tests
+#     availableNames = ['t'..'z'] ++ ['a'..'s']
+#     usedNames = union (allVars a) (allVars b)
+#     unusedNames = availableNames \\ usedNames
+#     namesToChange = intersect (boundVars a) (freeVars b)
+#     nameReplacements = zip namesToChange unusedNames
+#   in
+#     replaceNames a nameReplacements
+# 
+# allVars :: LambdaTree -> [Char]
+# allVars (Lambda arg body) = union [arg] (allVars body)
+# allVars (Apply a b) = union (allVars a) (allVars b)
+# allVars (Name name) = [name]
+# allVars _ = []
+# 
+# boundVars :: LambdaTree -> [Char]
+# boundVars (Lambda arg body) = union [arg] (boundVars body)
+# boundVars (Apply a b) = union (boundVars a) (boundVars b)
+# boundVars _ = []
+# 
+# freeVars tree = (allVars tree) \\ (boundVars tree)
+# 
+# replaceNames tree [] = tree
+# replaceNames tree ((old, new):rest) =
+#   replaceNames (replaceName tree old new) rest
+# 
+# -- replaceName ( tree        old     new) -> return value
+# replaceName :: LambdaTree -> Char -> Char -> LambdaTree
+# replaceName (Lambda arg body) old new = 
+#   Lambda (if arg == old then new else arg) (replaceName body old new) 
+# replaceName (Name name) old new =
+#   Name (if name == old then new else name)
+# replaceName (Apply a b) old new = 
+#   Apply (replaceName a old new) (replaceName b old new) 
+# replaceName whatever old new = whatever
 
   substitute = byType 'substitute',
     'lambda': (lambda, old, replacement) ->
