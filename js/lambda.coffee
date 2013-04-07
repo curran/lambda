@@ -2,8 +2,6 @@
 $.get 'lambda.peg', (grammar) ->
   parser = PEG.buildParser grammar
   
-  exec = (expr) ->
-    show eval parser.parse expr
 
   # This utility lets us approximate Haskell's 
   # pattern matching syntax in CoffeeScript
@@ -46,10 +44,48 @@ $.get 'lambda.peg', (grammar) ->
         a: reduce apply.a
         b: reduce apply.b
 
-  # TODO implement this
-  resolveNameConflicts = (a, b) -> a
+  allNames = "tabcdefghijklmnopqrstuvwxyz".split('')
 
-# resolveNameConflicts a b =
+  resolveNameConflicts = (a, b) ->
+    usedNames = _.union (allVars a), (allVars b)
+    newNames = _.difference allNames, usedNames
+    oldNames = _.intersection (boundVars a), (freeVars b)
+    for i in [0..oldNames.length]
+      do (i) ->
+        a = rename a, oldNames[i], newNames[i]
+    return a
+
+  extractNames = (onlyLambdaArgs) ->
+    byType 'vars',
+      'lambda': (lambda) ->
+        _.union [lambda.arg.name], allVars lambda.body
+      'apply': (apply) ->
+        _.union (allVars apply.a), (allVars apply.b)
+      'name': (name) ->
+        if onlyLambdaArgs then [] else [name.name]
+
+  allVars = extractNames false
+  boundVars = extractNames true
+  freeVars = (tree) ->
+    _.difference (allVars tree), (boundVars tree)
+
+  rename = byType 'rename',
+    'lambda': (lambda, oldName, newName) ->
+      _.extend lambda,
+        arg: rename lambda.arg, oldName, newName
+        body: rename lambda.body, oldName, newName
+    'apply': (apply, oldName, newName) ->
+      _.extend apply,
+        a: rename apply.a, oldName, newName
+        b: rename apply.b, oldName, newName
+    'name': (name, oldName, newName) ->
+      if name.name == oldName
+        name.name = newName
+      return name
+
+
+
+
 #   let
 #     -- start with 't' to satisfy given tests
 #     availableNames = ['t'..'z'] ++ ['a'..'s']
@@ -89,7 +125,6 @@ $.get 'lambda.peg', (grammar) ->
 
   substitute = byType 'substitute',
     'lambda': (lambda, old, replacement) ->
-      console.dir old.name
       # If arg == old the inner arg takes precedence
       # over the outer arg being replaced, so do not 
       # perform the substitution in the lambda body.
@@ -117,12 +152,18 @@ $.get 'lambda.peg', (grammar) ->
     e "(&x.xx)y", "yy"
     e "(&x.xx)(&x.x)", "(&x.x)"
     e "(&x.x)(&x.x)", "(&x.x)"
-# TODO next: make this test pass
     e "(&x.(&y.xy))y", "(&t.yt)"
+    e "(&x.(&y.(x(&x.xy))))y", "(&t.y(&x.xt))"
+    e "(&y.(&x.y((&z.z)x)))", "(&y.(&x.yx))"
+# TODO make this pass
+#    e "(&y.(&x.y((&s.(&z.z))yx)))", "(&y.(&x.yx))"
+#    e "(&w.(&y.(&x.y(wyx))))(&s.(&z.z))", "(&y.(&x.yx))"
     
+  # `exec` is for evaluating expressions in the REPL.
+  exec = (expr) -> show evaluate parser.parse expr
 
   # Export these just for testing in the REPL
   _.extend window, {
-    exec, reduce, test, show, parser,
-    byType
+    exec, evaluate, reduce, test, show, parser,
+    byType, allVars, freeVars, boundVars, rename
   }
