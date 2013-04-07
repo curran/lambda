@@ -1,35 +1,42 @@
 {
-  function makeApply(exprs){
+   function makeApply(exprs){
     if(exprs.length == 1)
       return exprs[0];
     else{
-      var a = exprs[0], b = exprs[1];
-      if(exprs.length > 2)
-        return {
-          type:"apply", 
-          a:makeApply([a,b]), 
-          b:makeApply(exprs.slice(2))
+      apply = {
+        type:'apply',
+        a: exprs[0],
+        b: exprs[1]
+      };
+      for(var i = 2; i < exprs.length; i++){
+        apply = {
+          type:'apply',
+          a: apply,
+          b: exprs[i]
         }
-      else
-        return { type:"apply", a:a, b:b }
+      }
+      return apply;
     }
   }
-}
-start =
-  exprs:expr* { return makeApply(exprs); }
-
-expr
-  = parens
-  / lambda 
-  / name
-
-parens
-  = "(" expr:start ")" { return expr; }
-
-lambda
-  = "&" arg:name "." body:start { 
-    return {type:"lambda", arg:arg, body:body};
+  function makeLambda(args, body){
+    if(args.length == 1)
+      return {type:"lambda", arg:args[0], body:body};
+    else
+      return {
+        type:"lambda", 
+        arg:args[0], 
+        body:makeLambda(args.slice(1), body)
+      };
   }
+}
+start = exprs:expr* { return makeApply(exprs); }
 
-name
-  = name:[a-z] { return {type:"name", name:name}; }
+expr = parens / lambda / name
+
+parens = "(" expr:start ")" { return expr; }
+
+lambda = "&" args:name* "." body:start { 
+  return makeLambda(args, body);
+}
+
+name = name:[a-z] { return {type:"name", name:name}; }

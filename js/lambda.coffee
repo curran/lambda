@@ -164,10 +164,14 @@ $.get 'lambda.peg', (grammar) ->
     e "(&y.(&x.y((&s.(&z.z))yx)))", "(&y.(&x.yx))"
     e "(&w.(&y.(&x.y(wyx))))(&s.(&z.z))", "(&y.(&x.yx))"
 
-# TODO next: Church Numerals
+# TODO next: Multi- argument functions
+
+    # Tests for multi-argument lambdas
+    e "(&sz.z)", "(&s.(&z.z))"
+    e "(&wxy.ywx)abc", "cab"
+    e "(&wxyz.zyxw)abcd", "dcba"
     
 #    # Tests for Curch Numerals
-#    e "(&wxy.ywx)abc", "cab"
 #    e "I", "(&x.x)"
 #    e "S", "(&w.(&y.(&x.y(wyx))))"
 #    e "(&s.(&z.z))", "(&s.(&z.z))"
@@ -215,8 +219,31 @@ $.get 'lambda.peg', (grammar) ->
   # `exec` is for evaluating expressions in the REPL.
   exec = (expr) -> show evaluate parser.parse expr
 
+  printTree = (tree) ->
+    helper = byType 'printTree',
+      'lambda': (lambda, indent) ->
+        console.log indent + 'lambda'
+        indent += '  '
+        console.log indent + 'arg'
+        helper lambda.arg, indent
+        console.log indent + 'body'
+        helper lambda.body, indent
+      'name': (name, indent) ->
+        console.log indent+'name '+name.name
+      'apply': (apply, indent) ->
+        console.log indent + 'apply'
+        indent += '  '
+        console.log indent + 'a'
+        helper apply.a, indent
+        console.log indent + 'b'
+        helper apply.b, indent
+    helper tree, ''
+
+      
+
   # Export these just for testing in the REPL
   _.extend window, {
     exec, evaluate, reduce, test, show, parser,
-    byType, allVars, freeVars, boundVars, rename
+    byType, allVars, freeVars, boundVars, rename,
+    printTree
   }
