@@ -1,21 +1,22 @@
 {
   function makeApply(exprs){
-    var a = exprs[0],
-        b = exprs[1];
-    if(exprs.length > 2)
-      return {
-        type:"apply", 
-        a:makeApply([a,b]), 
-        b:makeApply(exprs.slice(2))
-      }
-    else
-      return { type:"apply", a:a, b:b }
+    if(exprs.length == 1)
+      return exprs[0];
+    else{
+      var a = exprs[0], b = exprs[1];
+      if(exprs.length > 2)
+        return {
+          type:"apply", 
+          a:makeApply([a,b]), 
+          b:makeApply(exprs.slice(2))
+        }
+      else
+        return { type:"apply", a:a, b:b }
+    }
   }
 }
 start =
-  exprs:expr* {
-    return exprs.length == 1 ? exprs[0] : makeApply(exprs);
-  }
+  exprs:expr* { return makeApply(exprs); }
 
 expr
   = parens

@@ -149,15 +149,68 @@ $.get 'lambda.peg', (grammar) ->
 
   # The unit tests
   test = () ->
+
+    # Tests for substitution
+    e "x", "x"
+    e "xy", "xy"
     e "(&x.xx)y", "yy"
     e "(&x.xx)(&x.x)", "(&x.x)"
     e "(&x.x)(&x.x)", "(&x.x)"
+
+    # Tests for renaming
     e "(&x.(&y.xy))y", "(&t.yt)"
     e "(&x.(&y.(x(&x.xy))))y", "(&t.y(&x.xt))"
     e "(&y.(&x.y((&z.z)x)))", "(&y.(&x.yx))"
-# TODO make this pass
-#    e "(&y.(&x.y((&s.(&z.z))yx)))", "(&y.(&x.yx))"
+    e "(&y.(&x.y((&s.(&z.z))yx)))", "(&y.(&x.yx))"
+    e "(&w.(&y.(&x.y(wyx))))(&s.(&z.z))", "(&y.(&x.yx))"
+
+# TODO next: Church Numerals
+    
+#    # Tests for Curch Numerals
+#    e "(&wxy.ywx)abc", "cab"
+#    e "I", "(&x.x)"
+#    e "S", "(&w.(&y.(&x.y(wyx))))"
+#    e "(&s.(&z.z))", "(&s.(&z.z))"
 #    e "(&w.(&y.(&x.y(wyx))))(&s.(&z.z))", "(&y.(&x.yx))"
+#    e "S(&s.(&z.z))", "(&y.(&x.yx))"
+#    e "0", "(&s.(&z.z))"
+#    e "1", "(&y.(&x.yx))"
+#    e "7", "(&y.(&x.y(y(y(y(y(y(yx))))))))"
+#    e "+", "(&x.(&y.x(&w.(&y.(&x.y(wyx))))y))"
+#    e "*", "(&x.(&y.(&z.x(yz))))"
+#    e "(&w.(&y.(&x.y(wyx))))(&s.(&z.z))", "(&y.(&x.yx))"
+#    e "S0", "(&y.(&x.yx))"
+#    e "+ 2 3", "(&y.(&x.y(y(y(y(yx))))))"
+#    e "+ 2 1", "(&y.(&x.y(y(yx))))"
+#    e "* 4 3", "(&z.(&x.z(z(z(z(z(z(z(z(z(z(z(zx)))))))))))))"
+#    e "* 2 3", "(&z.(&x.z(z(z(z(z(zx)))))))"
+#    e "S (* 2 (+ 1 1))", "(&y.(&x.y(y(y(y(yx))))))"
+#    e "S(S(S(0)))", "(&y.(&x.y(y(yx))))"
+#
+#    # Tests for builtins and Y combinator
+#    e "(&x.xx)y", "yy"
+#    e "(&wxy.ywx)abc", "cab"
+#    e "7", "(&y.(&x.y(y(y(y(y(y(yx))))))))"
+#    e "+ 3 5", "(&y.(&x.y(y(y(y(y(y(y(yx)))))))))"
+#    e "(&x.(&y.xy))y", "(&t.yt)"
+#    e "(&x.(&y.(x(&x.xy))))y", "(&t.y(&x.xt))"
+#    e "T", "(&xy.x)"
+#    e "F", "(&xy.y)"
+#    e "N", "(&x.x(&uv.v)(&ab.a))"
+#    e "Z", "(&x.xFNF)"
+#    e "P1", "(&f.(&x.x))"
+#    e "P5", "(&f.(&x.f(f(f(fx)))))"
+#    e "A1", "(&z.(&x.zx))"
+#    e "A3", "(&z.(&x.z(z(z(z(z(zx)))))))"
+#    e "A4", "(&z.(&x.z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(zx)))))))))))))))))))))))))"
+#    e "24", "(&y.(&x.y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(yx)))))))))))))))))))))))))"
+#
+#    # Tests for subtraction and division
+#    e "- 10 3", "(&f.(&x.f(f(f(f(f(f(fx))))))))"
+#    e "/ 4 2", "2"
+#    e "/ 6 2", "3"
+#    e "/ 6 3", "2"
+#    e "/ 5 2", "2"
     
   # `exec` is for evaluating expressions in the REPL.
   exec = (expr) -> show evaluate parser.parse expr
