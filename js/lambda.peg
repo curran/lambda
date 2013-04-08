@@ -20,7 +20,11 @@
   }
   function makeLambda(args, body){
     if(args.length == 1)
-      return {type:"lambda", arg:args[0], body:body};
+      return {
+        type:"lambda", 
+        arg:args[0], 
+        body:body
+      };
     else
       return {
         type:"lambda", 
@@ -31,7 +35,7 @@
 }
 start = exprs:expr* { return makeApply(exprs); }
 
-expr = parens / lambda / name
+expr = parens / lambda / name / integer
 
 parens = "(" expr:start ")" { return expr; }
 
@@ -39,4 +43,14 @@ lambda = "&" args:name* "." body:start {
   return makeLambda(args, body);
 }
 
-name = name:[a-z] { return {type:"name", name:name}; }
+name = name:([a-z] / [A-Z] / '+' / '-' / '*' ) {
+  return {type:"name", name:name};
+}
+
+integer = digit:[0-9] { 
+  return {
+    type:"number",
+    name:"FFFF",
+    value: parseInt(digit)
+  };
+}

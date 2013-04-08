@@ -21,8 +21,12 @@ $.get 'lambda.peg', (grammar) ->
       body = show lambda.body
       "(&#{arg}.#{body})"
     'apply': (apply) ->
-      (show apply.a) + (show apply.b)
+      if apply.b.type == 'apply'
+        (show apply.a) + '(' + (show apply.b) + ')'
+      else
+        (show apply.a) + (show apply.b)
     'name': (name) -> name.name
+    'number': (number) -> number.value
 
   # `evaluate` keeps reducing the tree until a 
   # fixed point (irreducible tree) is reached.
@@ -32,10 +36,28 @@ $.get 'lambda.peg', (grammar) ->
     curr = show tree
     if prev == curr then tree else evaluate tree
 
+  builtins =
+    'I': "(&x.x)"
+    'S': "(&wyx.y(wyx))"
+    '+': "(&xy.xSy)"
+    '-': "(&xy.yPx)"
+    '*': "(&xyz.x(yz))"
+    '/': "(&ab.Y(&rnc.(G1n)c(r(-nb)(Sc)))a0)"
+    'T': "(&xy.x)"
+    'F': "(&xy.y)"
+    'N': "(&x.x(&uv.v)(&ab.a))"
+    'Z': "(&x.xFNF)"
+    'G': "(&xy.Z(xPy))"
+    'P': "(&n.&f.&x.n(&g.&h.h(gf))(&u.x)(&u.u))"
+    'Y': "(&g.((&x.g(xx))(&x.g(xx))))"
+    'A': "Y(&rn.Zn1(*(r(Pn))n))"
+
   reduce = byType 'reduce',
     'lambda': (lambda) -> _.extend lambda,
       body: reduce lambda.body
-    'name': (name) -> name
+    'name': (name) ->
+      builtin = builtins[name.name]
+      if builtin then parser.parse builtin else name
     'apply': (apply) ->
       if apply.a.type == 'lambda'
         lambda = resolveNameConflicts apply.a, apply.b
@@ -43,6 +65,15 @@ $.get 'lambda.peg', (grammar) ->
       else _.extend apply,
         a: reduce apply.a
         b: reduce apply.b
+    'number': (number) ->
+      value = number.value
+      if value == 0
+        parser.parse '(&s.(&z.z))'
+      else
+        parser.parse (
+          (('S(' for [1..value]).join '') + 
+          '0' + (')' for [1..value]).join ''
+        )
 
   allNames = "tabcdefghijklmnopqrstuvwxyz".split('')
 
@@ -172,18 +203,18 @@ $.get 'lambda.peg', (grammar) ->
     e "(&wxyz.zyxw)abcd", "dcba"
     
 #    # Tests for Curch Numerals
-#    e "I", "(&x.x)"
-#    e "S", "(&w.(&y.(&x.y(wyx))))"
-#    e "(&s.(&z.z))", "(&s.(&z.z))"
-#    e "(&w.(&y.(&x.y(wyx))))(&s.(&z.z))", "(&y.(&x.yx))"
-#    e "S(&s.(&z.z))", "(&y.(&x.yx))"
-#    e "0", "(&s.(&z.z))"
-#    e "1", "(&y.(&x.yx))"
-#    e "7", "(&y.(&x.y(y(y(y(y(y(yx))))))))"
-#    e "+", "(&x.(&y.x(&w.(&y.(&x.y(wyx))))y))"
-#    e "*", "(&x.(&y.(&z.x(yz))))"
-#    e "(&w.(&y.(&x.y(wyx))))(&s.(&z.z))", "(&y.(&x.yx))"
-#    e "S0", "(&y.(&x.yx))"
+    e "I", "(&x.x)"
+    e "S", "(&w.(&y.(&x.y(wyx))))"
+    e "(&s.(&z.z))", "(&s.(&z.z))"
+    e "(&w.(&y.(&x.y(wyx))))(&s.(&z.z))", "(&y.(&x.yx))"
+    e "S(&s.(&z.z))", "(&y.(&x.yx))"
+    e "0", "(&s.(&z.z))"
+    e "1", "(&y.(&x.yx))"
+    e "7", "(&y.(&x.y(y(y(y(y(y(yx))))))))"
+    e "+", "(&x.(&y.x(&w.(&y.(&x.y(wyx))))y))"
+    e "*", "(&x.(&y.(&z.x(yz))))"
+    e "(&w.(&y.(&x.y(wyx))))(&s.(&z.z))", "(&y.(&x.yx))"
+    e "S0", "(&y.(&x.yx))"
 #    e "+ 2 3", "(&y.(&x.y(y(y(y(yx))))))"
 #    e "+ 2 1", "(&y.(&x.y(y(yx))))"
 #    e "* 4 3", "(&z.(&x.z(z(z(z(z(z(z(z(z(z(z(zx)))))))))))))"
@@ -230,6 +261,8 @@ $.get 'lambda.peg', (grammar) ->
         helper lambda.body, indent
       'name': (name, indent) ->
         console.log indent+'name '+name.name
+      'number': (number, indent) ->
+        console.log indent+'number '+number.value
       'apply': (apply, indent) ->
         console.log indent + 'apply'
         indent += '  '
@@ -238,8 +271,6 @@ $.get 'lambda.peg', (grammar) ->
         console.log indent + 'b'
         helper apply.b, indent
     helper tree, ''
-
-      
 
   # Export these just for testing in the REPL
   _.extend window, {
