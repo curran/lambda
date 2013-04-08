@@ -35,7 +35,9 @@
 }
 start = exprs:expr* { return makeApply(exprs); }
 
-expr = parens / lambda / name / integer
+expr = expr:(parens / lambda / name / integer) ' '* {
+  return expr;
+}
 
 parens = "(" expr:start ")" { return expr; }
 

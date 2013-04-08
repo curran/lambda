@@ -70,8 +70,8 @@ $.get 'lambda.peg', (grammar) ->
       if value == 0
         parser.parse '(&s.(&z.z))'
       else
-        parser.parse (
-          (('S(' for [1..value]).join '') + 
+        evaluate parser.parse (
+          (('S(' for [1..value]).join '') +
           '0' + (')' for [1..value]).join ''
         )
 
@@ -94,6 +94,7 @@ $.get 'lambda.peg', (grammar) ->
         _.union (allVars apply.a), (allVars apply.b)
       'name': (name) ->
         if onlyLambdaArgs then [] else [name.name]
+      'number': (number) -> []
 
   allVars = extractNames false
   boundVars = extractNames true
@@ -113,46 +114,11 @@ $.get 'lambda.peg', (grammar) ->
       if name.name == oldName
         name.name = newName
       return name
+    'number': (number) -> []
 
 
 
 
-#   let
-#     -- start with 't' to satisfy given tests
-#     availableNames = ['t'..'z'] ++ ['a'..'s']
-#     usedNames = union (allVars a) (allVars b)
-#     unusedNames = availableNames \\ usedNames
-#     namesToChange = intersect (boundVars a) (freeVars b)
-#     nameReplacements = zip namesToChange unusedNames
-#   in
-#     replaceNames a nameReplacements
-# 
-# allVars :: LambdaTree -> [Char]
-# allVars (Lambda arg body) = union [arg] (allVars body)
-# allVars (Apply a b) = union (allVars a) (allVars b)
-# allVars (Name name) = [name]
-# allVars _ = []
-# 
-# boundVars :: LambdaTree -> [Char]
-# boundVars (Lambda arg body) = union [arg] (boundVars body)
-# boundVars (Apply a b) = union (boundVars a) (boundVars b)
-# boundVars _ = []
-# 
-# freeVars tree = (allVars tree) \\ (boundVars tree)
-# 
-# replaceNames tree [] = tree
-# replaceNames tree ((old, new):rest) =
-#   replaceNames (replaceName tree old new) rest
-# 
-# -- replaceName ( tree        old     new) -> return value
-# replaceName :: LambdaTree -> Char -> Char -> LambdaTree
-# replaceName (Lambda arg body) old new = 
-#   Lambda (if arg == old then new else arg) (replaceName body old new) 
-# replaceName (Name name) old new =
-#   Name (if name == old then new else name)
-# replaceName (Apply a b) old new = 
-#   Apply (replaceName a old new) (replaceName b old new) 
-# replaceName whatever old new = whatever
 
   substitute = byType 'substitute',
     'lambda': (lambda, old, replacement) ->
@@ -195,14 +161,12 @@ $.get 'lambda.peg', (grammar) ->
     e "(&y.(&x.y((&s.(&z.z))yx)))", "(&y.(&x.yx))"
     e "(&w.(&y.(&x.y(wyx))))(&s.(&z.z))", "(&y.(&x.yx))"
 
-# TODO next: Multi- argument functions
-
     # Tests for multi-argument lambdas
     e "(&sz.z)", "(&s.(&z.z))"
     e "(&wxy.ywx)abc", "cab"
     e "(&wxyz.zyxw)abcd", "dcba"
     
-#    # Tests for Curch Numerals
+    # Tests for Curch Numerals
     e "I", "(&x.x)"
     e "S", "(&w.(&y.(&x.y(wyx))))"
     e "(&s.(&z.z))", "(&s.(&z.z))"
@@ -215,12 +179,12 @@ $.get 'lambda.peg', (grammar) ->
     e "*", "(&x.(&y.(&z.x(yz))))"
     e "(&w.(&y.(&x.y(wyx))))(&s.(&z.z))", "(&y.(&x.yx))"
     e "S0", "(&y.(&x.yx))"
-#    e "+ 2 3", "(&y.(&x.y(y(y(y(yx))))))"
-#    e "+ 2 1", "(&y.(&x.y(y(yx))))"
+    e "+ 2 3", "(&y.(&x.y(y(y(y(yx))))))"
+    e "+ 2 1", "(&y.(&x.y(y(yx))))"
 #    e "* 4 3", "(&z.(&x.z(z(z(z(z(z(z(z(z(z(z(zx)))))))))))))"
 #    e "* 2 3", "(&z.(&x.z(z(z(z(z(zx)))))))"
 #    e "S (* 2 (+ 1 1))", "(&y.(&x.y(y(y(y(yx))))))"
-#    e "S(S(S(0)))", "(&y.(&x.y(y(yx))))"
+    e "S(S(S(0)))", "(&y.(&x.y(y(yx))))"
 #
 #    # Tests for builtins and Y combinator
 #    e "(&x.xx)y", "yy"
