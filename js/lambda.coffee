@@ -1,7 +1,5 @@
-
 $.get 'lambda.peg', (grammar) ->
   parser = PEG.buildParser grammar
-  
 
   # This utility lets us approximate Haskell's 
   # pattern matching syntax in CoffeeScript
@@ -36,16 +34,8 @@ $.get 'lambda.peg', (grammar) ->
       prev = show tree
       tree = reduce tree
       curr = show tree
-      fixedPoint = prev == curr
+      fixedPoint = (prev == curr)
     return tree
-
-  # `step` executes n reductions on `tree`
-  # and prints them to the console.
-  step = (n, tree) ->
-    for i in [0..n]
-      do (i) ->
-        console.log show tree
-        tree = reduce tree
 
   builtins =
     'I': "(&x.x)"
@@ -208,7 +198,7 @@ $.get 'lambda.peg', (grammar) ->
     e "S (* 2 (+ 1 1))", "(&y.(&x.y(y(y(y(yx))))))"
     e "S(S(S(0)))", "(&y.(&x.y(y(yx))))"
 
-    # Tests for builtins and Y combinator
+    # Tests for builtins
     e "(&x.xx)y", "yy"
     e "(&wxy.ywx)abc", "cab"
     e "7", "(&y.(&x.y(y(y(y(y(y(yx))))))))"
@@ -221,6 +211,8 @@ $.get 'lambda.peg', (grammar) ->
     e "Z", "(&x.xFNF)"
     e "P1", "(&s.(&z.z))"
     e "P5", "(&y.(&x.y(y(y(yx)))))"
+
+# TODO make the rest of these pass
 #    e "A1", "(&z.(&x.zx))"
 #    e "A3", "(&z.(&x.z(z(z(z(z(zx)))))))"
 #    e "A4", "(&z.(&x.z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(zx)))))))))))))))))))))))))"
@@ -232,10 +224,22 @@ $.get 'lambda.peg', (grammar) ->
 #    e "/ 6 2", "3"
 #    e "/ 6 3", "2"
 #    e "/ 5 2", "2"
+
+
+  # The functions below are for testing in the REPL.
     
-  # `exec` is for evaluating expressions in the REPL.
+  # `exec` is for evaluating expressions.
   exec = (expr) -> show evaluate parser.parse expr
 
+  # `step` executes n reductions on `tree`
+  # and prints each step to the console.
+  step = (n, tree) ->
+    for i in [0..n]
+      do (i) ->
+        console.log show tree
+        tree = reduce tree
+
+  # Prints the tree structure using indentation.
   printTree = (tree) ->
     helper = byType 'printTree',
       'lambda': (lambda, indent) ->
@@ -258,7 +262,7 @@ $.get 'lambda.peg', (grammar) ->
         helper apply.b, indent
     helper tree, ''
 
-  # Export these just for testing in the REPL
+  # Export these to the global object for testing in the REPL
   _.extend window, {
     exec, evaluate, reduce, test, show, parser,
     byType, allVars, freeVars, boundVars, rename,
