@@ -1,5 +1,6 @@
 $.get 'lambda.peg', (grammar) ->
   parser = PEG.buildParser grammar
+  parse = parser.parse
 
   # This utility lets us approximate Haskell's 
   # pattern matching syntax in CoffeeScript
@@ -7,9 +8,13 @@ $.get 'lambda.peg', (grammar) ->
     (tree) ->
       fn = fns[tree.type]
       if fn
+        # fn.apply is used
+        # ( instead of `fn(tree)`)
+        # so functions can take many arguments.
+        # (see `rename` and `substitute` as examples)
         fn.apply null, arguments
       else
-        throw "missing #{fnName}[#{tree.type}]"
+        throw Error "missing #{fnName}[#{tree.type}]"
 
   # The 'show' arg to byType is just for useful 
   # error reporting when a type match is missing.
@@ -20,8 +25,10 @@ $.get 'lambda.peg', (grammar) ->
       "(&#{arg}.#{body})"
     'apply': (apply) ->
       if apply.b.type == 'apply'
+        # Include parens for correct associativity
         (show apply.a) + '(' + (show apply.b) + ')'
       else
+        # ... only when necessary.
         (show apply.a) + (show apply.b)
     'name': (name) -> name.name
     'number': (number) -> number.value
@@ -37,6 +44,7 @@ $.get 'lambda.peg', (grammar) ->
       fixedPoint = (prev == curr)
     return tree
 
+  # see http://www.utdallas.edu/~gupta/courses/apl/lambda.pdf
   builtins =
     'I': "(&x.x)"
     'S': "(&wyx.y(wyx))"
@@ -60,10 +68,7 @@ $.get 'lambda.peg', (grammar) ->
       body: reduce lambda.body
     'name': (name) ->
       builtin = builtins[name.name]
-      if builtin
-        evaluate parser.parse builtin
-      else
-        name
+      if builtin then evaluate parse builtin else name
     'apply': (apply) ->
       if apply.a.type == 'lambda'
         lambda = resolveNameConflicts apply.a, apply.b
@@ -74,14 +79,14 @@ $.get 'lambda.peg', (grammar) ->
         b: reduce apply.b
     'number': (number) ->
       value = number.value
-      if value == 0
-        parser.parse '(&s.(&z.z))'
-      else
-        evaluate parser.parse (
-          (('S(' for [1..value]).join '') +
-          '0' + (')' for [1..value]).join ''
-        )
+      if value == 0 then parse '(&s.(&z.z))'
+      else evaluate parse ( _.flatten [
+        'S(' for [1..value],
+        '0',
+        ')' for [1..value]
+      ]).join ''
 
+  # Starts with 't' because unit tests expect it.
   allNames = "tabcdefghijklmnopqrsuvwxyz".split('')
 
   resolveNameConflicts = (a, b) ->
@@ -89,8 +94,7 @@ $.get 'lambda.peg', (grammar) ->
     newNames = _.difference allNames, usedNames
     oldNames = _.intersection (boundVars a), (freeVars b)
     for i in [0..oldNames.length]
-      do (i) ->
-        a = rename a, oldNames[i], newNames[i]
+      do -> a = rename a, oldNames[i], newNames[i]
     return a
 
   extractNames = (onlyLambdaArgs) ->
@@ -110,13 +114,13 @@ $.get 'lambda.peg', (grammar) ->
 
   rename = byType 'rename',
     'lambda': (lambda, oldName, newName) ->
-        type: 'lambda'
-        arg: rename lambda.arg, oldName, newName
-        body: rename lambda.body, oldName, newName
+      type: 'lambda'
+      arg: rename lambda.arg, oldName, newName
+      body: rename lambda.body, oldName, newName
     'apply': (apply, oldName, newName) ->
-        type: 'apply'
-        a: rename apply.a, oldName, newName
-        b: rename apply.b, oldName, newName
+      type: 'apply'
+      a: rename apply.a, oldName, newName
+      b: rename apply.b, oldName, newName
     'name': (name, oldName, newName) ->
       if name.name == oldName
         type: 'name'
@@ -137,10 +141,7 @@ $.get 'lambda.peg', (grammar) ->
         arg: lambda.arg
         body: substitute lambda.body, old, replacement
     'name': (name, old, replacement) ->
-      if name.name == old.name
-        replacement
-      else
-        name
+      if name.name == old.name then replacement else name
     'apply': (apply, old, replacement) ->
       type: 'apply'
       a: substitute apply.a, old, replacement
@@ -148,13 +149,15 @@ $.get 'lambda.peg', (grammar) ->
   
   # `e` (for "expect") evaluates a lambda calculus 
   # expressions and tests for equality with an expected output.
-  e = (input, expectedOutput) ->
-    inputResult = show evaluate parser.parse input
-    outputResult = show evaluate parser.parse expectedOutput
+  e = (input, output) ->
+    inputResult = exec input
+    outputResult = exec output
     if inputResult != outputResult
       console.log """Test failed: for input '#{input}',
         expected #{outputResult}
         but got  #{inputResult} """
+
+  exec = (expr) -> show evaluate parse expr
 
   # The unit tests
   test = () ->
@@ -225,17 +228,13 @@ $.get 'lambda.peg', (grammar) ->
 #    e "/ 6 3", "2"
 #    e "/ 5 2", "2"
 
-
   # The functions below are for testing in the REPL.
-    
-  # `exec` is for evaluating expressions.
-  exec = (expr) -> show evaluate parser.parse expr
 
   # `step` executes n reductions on `tree`
   # and prints each step to the console.
   step = (n, tree) ->
-    for i in [0..n]
-      do (i) ->
+    for [0..n]
+      do ->
         console.log show tree
         tree = reduce tree
 
@@ -262,7 +261,7 @@ $.get 'lambda.peg', (grammar) ->
         helper apply.b, indent
     helper tree, ''
 
-  # Export these to the global object for testing in the REPL
+  # Export functions to the global object for testing in the REPL
   _.extend window, {
     exec, evaluate, reduce, test, show, parser,
     byType, allVars, freeVars, boundVars, rename,
