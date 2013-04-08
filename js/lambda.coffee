@@ -35,6 +35,7 @@ $.get 'lambda.peg', (grammar) ->
 
   # `evaluate` keeps reducing the tree until a 
   # fixed point (irreducible tree) is reached.
+  numSteps = 0
   evaluate = (tree) ->
     fixedPoint = false
     while !fixedPoint
@@ -42,6 +43,7 @@ $.get 'lambda.peg', (grammar) ->
       tree = reduce tree
       curr = show tree
       fixedPoint = (prev == curr)
+      numSteps++
     return tree
 
   # see http://www.utdallas.edu/~gupta/courses/apl/lambda.pdf
@@ -68,7 +70,7 @@ $.get 'lambda.peg', (grammar) ->
       body: reduce lambda.body
     'name': (name) ->
       builtin = builtins[name.name]
-      if builtin then evaluate parse builtin else name
+      if builtin then reduce parse builtin else name
     'apply': (apply) ->
       if apply.a.type == 'lambda'
         lambda = resolveNameConflicts apply.a, apply.b
@@ -150,12 +152,17 @@ $.get 'lambda.peg', (grammar) ->
   # `e` (for "expect") evaluates a lambda calculus 
   # expressions and tests for equality with an expected output.
   e = (input, output) ->
+    console.log "testing '#{input}'"
+    numSteps = 0
     inputResult = exec input
+    numStepsForInput = numSteps
     outputResult = exec output
     if inputResult != outputResult
-      console.log """Test failed: for input '#{input}',
+      console.error """Test failed: for input '#{input}',
         expected #{outputResult}
-        but got  #{inputResult} """
+        but got  #{inputResult}"""
+    else
+      console.log "  ok, took #{numStepsForInput} steps"
 
   exec = (expr) -> show evaluate parse expr
 
@@ -216,14 +223,16 @@ $.get 'lambda.peg', (grammar) ->
     e "P5", "(&y.(&x.y(y(y(yx)))))"
 
 # TODO make the rest of these pass
-#    e "A1", "(&z.(&x.zx))"
-#    e "A3", "(&z.(&x.z(z(z(z(z(zx)))))))"
+    # Tests for Y-Combinator
+    e "A1", "(&z.(&x.zx))"
+    e "A3", "(&z.(&x.z(z(z(z(z(zx)))))))"
 #    e "A4", "(&z.(&x.z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(zx)))))))))))))))))))))))))"
 #    e "24", "(&y.(&x.y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(y(yx)))))))))))))))))))))))))"
 #
 #    # Tests for subtraction and division
 #    e "- 10 3", "(&f.(&x.f(f(f(f(f(f(fx))))))))"
-#    e "/ 4 2", "2"
+    e "/ 4 2", "2"
+    e "/ 3 2", "1"
 #    e "/ 6 2", "3"
 #    e "/ 6 3", "2"
 #    e "/ 5 2", "2"
@@ -232,7 +241,8 @@ $.get 'lambda.peg', (grammar) ->
 
   # `step` executes n reductions on `tree`
   # and prints each step to the console.
-  step = (n, tree) ->
+  step = (n, expr) ->
+    tree = parse expr
     for [0..n]
       do ->
         console.log show tree

@@ -45,14 +45,24 @@ lambda = "&" args:name* "." body:start {
   return makeLambda(args, body);
 }
 
-name = name:([a-z] / [A-Z] / '+' / '-' / '*' ) {
+name = name:([a-z] / [A-Z] / '+' / '-' / '*' / '/' ) {
   return {type:"name", name:name};
 }
 
+// TODO find out why tests break
+// when using the commented out version
+// that supports multi-character numbers.
 integer = digit:[0-9] { 
+//  console.log("number "+parseInt(digit));
   return {
     type:"number",
-    name:"FFFF",
-    value: parseInt(digit)
+    value: parseInt(digit, 10)
   };
 }
+//integer = digits:[0-9]+ { 
+//  console.log("number "+parseInt(digits.join(""), 10));
+//  return {
+//    type:"number",
+//    value: parseInt(digits.join(""), 10)
+//  };
+//}
