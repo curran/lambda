@@ -31,10 +31,21 @@ $.get 'lambda.peg', (grammar) ->
   # `evaluate` keeps reducing the tree until a 
   # fixed point (irreducible tree) is reached.
   evaluate = (tree) ->
-    prev = show tree
-    tree = reduce tree
-    curr = show tree
-    if prev == curr then tree else evaluate tree
+    fixedPoint = false
+    while !fixedPoint
+      prev = show tree
+      tree = reduce tree
+      curr = show tree
+      fixedPoint = prev == curr
+    return tree
+
+  # `step` executes n reductions on `tree`
+  # and prints them to the console.
+  step = (n, tree) ->
+    for i in [0..n]
+      do (i) ->
+        console.log show tree
+        tree = reduce tree
 
   builtins =
     'I': "(&x.x)"
@@ -48,21 +59,27 @@ $.get 'lambda.peg', (grammar) ->
     'N': "(&x.x(&uv.v)(&ab.a))"
     'Z': "(&x.xFNF)"
     'G': "(&xy.Z(xPy))"
-    'P': "(&n.&f.&x.n(&g.&h.h(gf))(&u.x)(&u.u))"
+    'P': "(&n.n(&pz.z(S(pT))(pT))(&z.z00)F)"
     'Y': "(&g.((&x.g(xx))(&x.g(xx))))"
     'A': "Y(&rn.Zn1(*(r(Pn))n))"
 
   reduce = byType 'reduce',
-    'lambda': (lambda) -> _.extend lambda,
+    'lambda': (lambda) ->
+      type: 'lambda'
+      arg: lambda.arg
       body: reduce lambda.body
     'name': (name) ->
       builtin = builtins[name.name]
-      if builtin then parser.parse builtin else name
+      if builtin
+        evaluate parser.parse builtin
+      else
+        name
     'apply': (apply) ->
       if apply.a.type == 'lambda'
         lambda = resolveNameConflicts apply.a, apply.b
         substitute lambda.body, lambda.arg, apply.b
-      else _.extend apply,
+      else
+        type: 'apply'
         a: reduce apply.a
         b: reduce apply.b
     'number': (number) ->
@@ -75,7 +92,7 @@ $.get 'lambda.peg', (grammar) ->
           '0' + (')' for [1..value]).join ''
         )
 
-  allNames = "tabcdefghijklmnopqrstuvwxyz".split('')
+  allNames = "tabcdefghijklmnopqrsuvwxyz".split('')
 
   resolveNameConflicts = (a, b) ->
     usedNames = _.union (allVars a), (allVars b)
@@ -103,46 +120,51 @@ $.get 'lambda.peg', (grammar) ->
 
   rename = byType 'rename',
     'lambda': (lambda, oldName, newName) ->
-      _.extend lambda,
+        type: 'lambda'
         arg: rename lambda.arg, oldName, newName
         body: rename lambda.body, oldName, newName
     'apply': (apply, oldName, newName) ->
-      _.extend apply,
+        type: 'apply'
         a: rename apply.a, oldName, newName
         b: rename apply.b, oldName, newName
     'name': (name, oldName, newName) ->
       if name.name == oldName
-        name.name = newName
-      return name
+        type: 'name'
+        name: newName
+      else
+        name
     'number': (number) -> []
-
-
-
-
 
   substitute = byType 'substitute',
     'lambda': (lambda, old, replacement) ->
       # If arg == old the inner arg takes precedence
       # over the outer arg being replaced, so do not 
       # perform the substitution in the lambda body.
-      if lambda.arg.name == old.name then lambda
-      else _.extend lambda, body:
-        substitute lambda.body, old, replacement
+      if lambda.arg.name == old.name
+        lambda
+      else
+        type: 'lambda'
+        arg: lambda.arg
+        body: substitute lambda.body, old, replacement
     'name': (name, old, replacement) ->
-      if name.name == old.name then replacement else name
+      if name.name == old.name
+        replacement
+      else
+        name
     'apply': (apply, old, replacement) ->
-      _.extend apply,
-        a: substitute apply.a, old, replacement
-        b: substitute apply.b, old, replacement
+      type: 'apply'
+      a: substitute apply.a, old, replacement
+      b: substitute apply.b, old, replacement
   
   # `e` (for "expect") evaluates a lambda calculus 
   # expressions and tests for equality with an expected output.
   e = (input, expectedOutput) ->
-    output = show evaluate parser.parse input
-    if output != expectedOutput
+    inputResult = show evaluate parser.parse input
+    outputResult = show evaluate parser.parse expectedOutput
+    if inputResult != outputResult
       console.log """Test failed: for input '#{input}',
-        expected #{expectedOutput}
-        but got  #{output} """
+        expected #{outputResult}
+        but got  #{inputResult} """
 
   # The unit tests
   test = () ->
@@ -181,24 +203,24 @@ $.get 'lambda.peg', (grammar) ->
     e "S0", "(&y.(&x.yx))"
     e "+ 2 3", "(&y.(&x.y(y(y(y(yx))))))"
     e "+ 2 1", "(&y.(&x.y(y(yx))))"
-#    e "* 4 3", "(&z.(&x.z(z(z(z(z(z(z(z(z(z(z(zx)))))))))))))"
-#    e "* 2 3", "(&z.(&x.z(z(z(z(z(zx)))))))"
-#    e "S (* 2 (+ 1 1))", "(&y.(&x.y(y(y(y(yx))))))"
+    e "* 4 3", "(&z.(&x.z(z(z(z(z(z(z(z(z(z(z(zx)))))))))))))"
+    e "* 2 3", "(&z.(&x.z(z(z(z(z(zx)))))))"
+    e "S (* 2 (+ 1 1))", "(&y.(&x.y(y(y(y(yx))))))"
     e "S(S(S(0)))", "(&y.(&x.y(y(yx))))"
-#
-#    # Tests for builtins and Y combinator
-#    e "(&x.xx)y", "yy"
-#    e "(&wxy.ywx)abc", "cab"
-#    e "7", "(&y.(&x.y(y(y(y(y(y(yx))))))))"
-#    e "+ 3 5", "(&y.(&x.y(y(y(y(y(y(y(yx)))))))))"
-#    e "(&x.(&y.xy))y", "(&t.yt)"
-#    e "(&x.(&y.(x(&x.xy))))y", "(&t.y(&x.xt))"
-#    e "T", "(&xy.x)"
-#    e "F", "(&xy.y)"
-#    e "N", "(&x.x(&uv.v)(&ab.a))"
-#    e "Z", "(&x.xFNF)"
-#    e "P1", "(&f.(&x.x))"
-#    e "P5", "(&f.(&x.f(f(f(fx)))))"
+
+    # Tests for builtins and Y combinator
+    e "(&x.xx)y", "yy"
+    e "(&wxy.ywx)abc", "cab"
+    e "7", "(&y.(&x.y(y(y(y(y(y(yx))))))))"
+    e "+ 3 5", "(&y.(&x.y(y(y(y(y(y(y(yx)))))))))"
+    e "(&x.(&y.xy))y", "(&t.yt)"
+    e "(&x.(&y.(x(&x.xy))))y", "(&t.y(&x.xt))"
+    e "T", "(&xy.x)"
+    e "F", "(&xy.y)"
+    e "N", "(&x.x(&uv.v)(&ab.a))"
+    e "Z", "(&x.xFNF)"
+    e "P1", "(&s.(&z.z))"
+    e "P5", "(&y.(&x.y(y(y(yx)))))"
 #    e "A1", "(&z.(&x.zx))"
 #    e "A3", "(&z.(&x.z(z(z(z(z(zx)))))))"
 #    e "A4", "(&z.(&x.z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(z(zx)))))))))))))))))))))))))"
@@ -240,5 +262,5 @@ $.get 'lambda.peg', (grammar) ->
   _.extend window, {
     exec, evaluate, reduce, test, show, parser,
     byType, allVars, freeVars, boundVars, rename,
-    printTree
+    printTree, step
   }
