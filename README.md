@@ -14,9 +14,13 @@ The story:
  * Thought to generate an abstract syntax tree using simple object literals with a string `type` property (one of `'lambda'`, `'apply'`, `'name'`)
  * Had to write helper functions for the parser to achieve proper associativity for sequential apply statements and multi-argument lambdas.
  * Ported Haskell interpreter to CoffeeScript (using Underscore when needed)
- * Emulated pure functional style by always creating new AST nodes for reduction steps
+ * Started by mixing pure functional (immutable AST nodes) and imperative (mutable AST nodes) styles
+   * Using mutable AST nodes led to an error where multiple references to the same
+     node appeared multiple times in the tree (from the substitution step), leading to a stack overflow 
+     error when reducing due to circular reference (e.g. applying a node to itself).
+ * For safety, chose to go with pure functional style by always creating new AST nodes for all reduction steps
  * Ideas for future work:
-   * use a procedural style that mutates AST nodes during reduction steps.
+   * Use a procedural style that mutates AST nodes during reduction steps.
    * Instrument the code to count how many new AST objects are created.
    * Visualize a table with the following columns:
      * input - a lambda calculus expression (from unit tests)

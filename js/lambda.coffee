@@ -70,6 +70,8 @@ $.get 'lambda.peg', (grammar) ->
       body: reduce lambda.body
     'name': (name) ->
       builtin = builtins[name.name]
+      # Perform one reduce step on builtins
+      # so symbols are substituted right away
       if builtin then reduce parse builtin else name
     'apply': (apply) ->
       if apply.a.type == 'lambda'
