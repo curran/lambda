@@ -4,9 +4,9 @@ $.get 'lambda.peg', (grammar) ->
 
   # This utility lets us approximate Haskell's 
   # pattern matching syntax in CoffeeScript
-  byType = (fnName, fns) ->
-    (tree) ->
-      fn = fns[tree.type]
+  match = (property, fns, fnName = 'obj') ->
+    (obj) ->
+      fn = fns[obj[property]]
       if fn
         # fn.apply is used
         # ( instead of `fn(tree)`)
@@ -14,7 +14,25 @@ $.get 'lambda.peg', (grammar) ->
         # (see `rename` and `substitute` as examples)
         fn.apply null, arguments
       else
-        throw Error "missing #{fnName}[#{tree.type}]"
+        throw Error "no match for #{fnName}.#{property} = #{tree.type}"
+
+  byType = (fnName, fns) ->
+    match 'type', fns, 'byType'
+
+  # This is the first version of `byType`:
+  # Keeping it around because it's interesting to see the progression
+  # from this to the generalized version.
+  #byType = (fnName, fns) ->
+  #  (tree) ->
+  #    fn = fns[tree.type]
+  #    if fn
+  #      # fn.apply is used
+  #      # ( instead of `fn(tree)`)
+  #      # so functions can take many arguments.
+  #      # (see `rename` and `substitute` as examples)
+  #      fn.apply null, arguments
+  #    else
+  #      throw Error "missing #{fnName}[#{tree.type}]"
 
   # The 'show' arg to byType is just for useful 
   # error reporting when a type match is missing.
