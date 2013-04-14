@@ -56,9 +56,9 @@ show = match type
   name: (name) -> name.name
   number: (number) -> number.value
 
-# The CoffeeScript compiler could track which varuable
-# the function is assigned to for nice error reporting,
-# and could interpret the string directly following 'match'
+# The CoffeeScript compiler could track which variable
+# the function is assigned to (if any) for nice error reporting,
+# and could interpret the name directly following 'match' as
 # as the property name to match.
 #
 # Not much of a difference, but it would be neat to be able
