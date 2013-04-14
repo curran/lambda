@@ -14,19 +14,19 @@ match = (property, fnName, fns) ->
 
 # Using `match` looks like this:
 show = match 'type', 'show'
-  'lambda': (lambda) ->
+  lambda: (lambda) ->
     arg = lambda.arg.name
     body = show lambda.body
     "(&#{arg}.#{body})"
-  'apply': (apply) ->
+  apply: (apply) ->
     if apply.b.type == 'apply'
       # Include parens for correct associativity
       (show apply.a) + '(' + (show apply.b) + ')'
     else
       # ... only when necessary.
       (show apply.a) + (show apply.b)
-  'name': (name) -> name.name
-  'number': (number) -> number.value
+  name: (name) -> name.name
+  number: (number) -> number.value
 
 # Notice how the function name `show` is passed in
 # as an argument to `match` so that the error message
@@ -42,19 +42,19 @@ show = match 'type', 'show'
 # 'match' could be integrated into the CoffeeScriipt language.
 # Using it could look like this:
 show = match type
-  'lambda': (lambda) ->
+  lambda: (lambda) ->
     arg = lambda.arg.name
     body = show lambda.body
     "(&#{arg}.#{body})"
-  'apply': (apply) ->
+  apply: (apply) ->
     if apply.b.type == 'apply'
       # Include parens for correct associativity
       (show apply.a) + '(' + (show apply.b) + ')'
     else
       # ... only when necessary.
       (show apply.a) + (show apply.b)
-  'name': (name) -> name.name
-  'number': (number) -> number.value
+  name: (name) -> name.name
+  number: (number) -> number.value
 
 # The CoffeeScript compiler could track which varuable
 # the function is assigned to for nice error reporting,
